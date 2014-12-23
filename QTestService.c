@@ -1,9 +1,30 @@
-// This code is from http://omeg.pl/blog/2014/01/running-processes-on-the-winlogon-desktop/
-// Doesn't compile for me, I can't find log.h
+/*
+This code is from http://omeg.pl/blog/2014/01/running-processes-on-the-winlogon-desktop/
+It has been modified, refer to https://gist.github.com/jay/be6b18a2eece726922bb/revisions
+
+This service works to run a command on the winlogon desktop during switch user. It may take several
+seconds before the command runs, not sure why. The service stops after it runs the command.
+
+gcc -o QTestService QTestService.c
+
+sc create QTestService binPath= X:\code\winlogon\QTestService\QTestService.exe start= demand
+sc start QTestService
+*/
 
 #include <windows.h>
 
-#include "log.h"
+//#include "log.h"
+#include <stdio.h>
+
+FILE *g_fp;
+
+#define log_init(unknown1, unknown2) do { \
+g_fp = fopen("X:\\code\\winlogon\\QTestService\\QTestService.log", "a"); \
+} while(0)
+
+#define logf(...) do { \
+if(g_fp) fprintf(g_fp, __VA_ARGS__); fprintf(g_fp, "\n"); fflush(g_fp); \
+} while(0)
 
 #define SERVICE_NAME TEXT("QTestService")
 
@@ -12,7 +33,7 @@ SERVICE_STATUS_HANDLE g_StatusHandle;
 HANDLE g_ConsoleEvent;
 DWORD g_TargetSessionId;
 
-void ServiceMain(int argc, TCHAR *argv[]);
+void ServiceMain(unsigned long argc, TCHAR *argv[]);
 DWORD ControlHandlerEx(DWORD controlCode, DWORD eventType, void *eventData, void *context);
 
 WCHAR *g_SessionEventName[] = {
@@ -42,6 +63,7 @@ int main(int argc, TCHAR *argv[])
     logf("main: start");
     StartServiceCtrlDispatcher(serviceTable);
     logf("main: end");
+    return 0;
 }
 
 DWORD WINAPI WorkerThread(void *param)
@@ -101,7 +123,7 @@ DWORD WINAPI WorkerThread(void *param)
     return ERROR_SUCCESS;
 }
 
-void ServiceMain(int argc, TCHAR *argv[])
+void ServiceMain(unsigned long argc, TCHAR *argv[])
 {
     TCHAR *cmdline = TEXT("cmd.exe");
     HANDLE workerHandle;

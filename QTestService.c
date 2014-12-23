@@ -1,7 +1,13 @@
 /*
 This code is from http://omeg.pl/blog/2014/01/running-processes-on-the-winlogon-desktop/
+
 It has been modified, refer to https://gist.github.com/jay/be6b18a2eece726922bb/revisions
 
+- Use stub functions for logf and log_init since I can't find log.h.
+- Correct the function signature for ServiceMain.
+- Return 0 from main.
+
+----------
 This service works to run a command on the winlogon desktop during switch user. It may take several
 seconds before the command runs, not sure why. The service stops after it runs the command.
 

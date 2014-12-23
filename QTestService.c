@@ -1,15 +1,9 @@
 /*
-This code is from http://omeg.pl/blog/2014/01/running-processes-on-the-winlogon-desktop/
+This is my fork of omeg's QTestService from his article 'Running processes on the Winlogon desktop'.
 
-It has been modified, refer to https://gist.github.com/jay/be6b18a2eece726922bb/revisions
+http://omeg.pl/blog/2014/01/running-processes-on-the-winlogon-desktop/
+https://github.com/jay/QTestService
 
-- Use stub functions for logf and log_init since I can't find log.h.
-- Correct the function signature for ServiceMain.
-- Return 0 from main.
-- Bug: Close currentToken instead of currentProcess in WorkerThread.
-- Close process, thread and newToken handles in WorkerThread.
-
-----------
 This service works to run a command on the winlogon desktop during switch user. It may take several
 seconds before the command runs, not sure why. The service stops after it runs the command.
 

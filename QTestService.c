@@ -6,6 +6,8 @@ It has been modified, refer to https://gist.github.com/jay/be6b18a2eece726922bb/
 - Use stub functions for logf and log_init since I can't find log.h.
 - Correct the function signature for ServiceMain.
 - Return 0 from main.
+- Bug: Close currentToken instead of currentProcess in WorkerThread.
+- Close process, thread and newToken handles in WorkerThread.
 
 ----------
 This service works to run a command on the winlogon desktop during switch user. It may take several
@@ -101,7 +103,7 @@ DWORD WINAPI WorkerThread(void *param)
         perror("DuplicateToken");
         return GetLastError();
     }
-    CloseHandle(currentProcess);
+    CloseHandle(currentToken);
 
     // g_TargetSessionId is set by SessionChange() handler after a WTS_CONSOLE_CONNECT event.
     // Its value is the new console session ID. In our case it's the "logon screen".
@@ -125,6 +127,9 @@ DWORD WINAPI WorkerThread(void *param)
         perror("CreateProcessAsUser");
         return GetLastError();
     }
+    CloseHandle(newToken);
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
 
     return ERROR_SUCCESS;
 }

@@ -22,10 +22,19 @@ FILE *g_fp;
 
 #define log_init(unknown1, unknown2) do { \
 g_fp = fopen("X:\\code\\winlogon\\QTestService\\QTestService.log", "a"); \
+if(g_fp) { fprintf(g_fp, "\n\n"); fflush(g_fp); } \
 } while(0)
 
 #define logf(...) do { \
-if(g_fp) { fprintf(g_fp, __VA_ARGS__); fprintf(g_fp, "\n"); fflush(g_fp); } \
+    if(g_fp) { \
+        SYSTEMTIME t; \
+        GetLocalTime(&t); \
+        fprintf(g_fp, "%04u-%02u-%02u %02u:%02u:%02u.%03u - ", \
+            t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond, t.wMilliseconds); \
+        fprintf(g_fp, __VA_ARGS__); \
+        fprintf(g_fp, "\n"); \
+        fflush(g_fp); \
+    } \
 } while(0)
 
 #define SERVICE_NAME TEXT("QTestService")

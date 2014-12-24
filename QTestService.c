@@ -25,7 +25,7 @@ g_fp = fopen("X:\\code\\winlogon\\QTestService\\QTestService.log", "a"); \
 } while(0)
 
 #define logf(...) do { \
-if(g_fp) fprintf(g_fp, __VA_ARGS__); fprintf(g_fp, "\n"); fflush(g_fp); \
+if(g_fp) { fprintf(g_fp, __VA_ARGS__); fprintf(g_fp, "\n"); fflush(g_fp); } \
 } while(0)
 
 #define SERVICE_NAME TEXT("QTestService")

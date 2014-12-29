@@ -42,8 +42,8 @@ All user objects (read: GUI stuff) consume memory from the heap of the desktop t
 
 ### Reference
 
-[Sessions, Desktops and Windows Stations](http://blogs.technet.com/b/askperf/archive/2007/07/24/sessions-desktops-and-windows-stations.aspx)
-[Desktop Heap Overview](http://blogs.msdn.com/b/ntdebugging/archive/2007/01/04/desktop-heap-overview.aspx)
-[Desktop Heap Monitor for Windows Vista, Server 2008 and 7](http://blog.airesoft.co.uk/2009/10/desktop-heap-monitor-vista-7/)
-[Pushing the Limits of Windows: USER and GDI Objects](http://blogs.technet.com/b/markrussinovich/archive/2010/02/24/3315174.aspx)
-[Running processes on the Winlogon desktop](http://omeg.pl/blog/2014/01/running-processes-on-the-winlogon-desktop/)
+- [Sessions, Desktops and Windows Stations](http://blogs.technet.com/b/askperf/archive/2007/07/24/sessions-desktops-and-windows-stations.aspx)
+- [Desktop Heap Overview](http://blogs.msdn.com/b/ntdebugging/archive/2007/01/04/desktop-heap-overview.aspx)
+- [Desktop Heap Monitor for Windows Vista, Server 2008 and 7](http://blog.airesoft.co.uk/2009/10/desktop-heap-monitor-vista-7/)
+- [Pushing the Limits of Windows: USER and GDI Objects](http://blogs.technet.com/b/markrussinovich/archive/2010/02/24/3315174.aspx)
+- [Running processes on the Winlogon desktop](http://omeg.pl/blog/2014/01/running-processes-on-the-winlogon-desktop/)

@@ -435,6 +435,7 @@ void SessionChange(DWORD eventType, WTSSESSION_NOTIFICATION *sn)
 
 DWORD WINAPI ControlHandlerEx(DWORD control, DWORD eventType, void *eventData, void *context)
 {
+    DWORD errcode = ERROR_SUCCESS;
     TCHAR *codename = GetControlCodeName(control);
 
     if(codename)
@@ -446,7 +447,7 @@ DWORD WINAPI ControlHandlerEx(DWORD control, DWORD eventType, void *eventData, v
     {
         case SERVICE_CONTROL_STOP:
         case SERVICE_CONTROL_SHUTDOWN:
-            g_Status.dwWin32ExitCode = 0;
+            g_Status.dwWin32ExitCode = ERROR_SUCCESS;
             g_Status.dwCurrentState = SERVICE_STOPPED;
             logf("stopping...");
             SetServiceStatus(g_StatusHandle, &g_Status);
@@ -455,7 +456,14 @@ DWORD WINAPI ControlHandlerEx(DWORD control, DWORD eventType, void *eventData, v
         case SERVICE_CONTROL_SESSIONCHANGE:
             SessionChange(eventType, (WTSSESSION_NOTIFICATION*) eventData);
             break;
+
+        case SERVICE_CONTROL_INTERROGATE:
+            break;
+
+        default:
+            errcode = ERROR_CALL_NOT_IMPLEMENTED;
+            break;
     }
 
-    return ERROR_SUCCESS;
+    return errcode;
 }

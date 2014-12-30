@@ -65,3 +65,4 @@ What happens next is the temporary session for the switch user screen is no long
 - [Desktop Heap Monitor for Windows Vista, Server 2008 and 7](http://blog.airesoft.co.uk/2009/10/desktop-heap-monitor-vista-7/)
 - [Pushing the Limits of Windows: USER and GDI Objects](http://blogs.technet.com/b/markrussinovich/archive/2010/02/24/3315174.aspx)
 - [Running processes on the Winlogon desktop](http://omeg.pl/blog/2014/01/running-processes-on-the-winlogon-desktop/)
+- [Displaying a program on the Windows secure desktop](http://calebdelnay.com/blog/2012/01/displaying-a-program-on-the-windows-secure-desktop)

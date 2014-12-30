@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
 
 DWORD WINAPI WorkerThread(void *param)
 {
-    DWORD exitcode = ERROR_SUCCESS;
+    DWORD errcode = ERROR_SUCCESS;
     TCHAR *cmdline = NULL;
     size_t cmdline_len = 0;
     PROCESS_INFORMATION pi = { INVALID_HANDLE_VALUE, INVALID_HANDLE_VALUE, 0, 0 };
@@ -198,7 +198,7 @@ DWORD WINAPI WorkerThread(void *param)
     if(!param)
     {
         logf("Error: No command line");
-        exitcode = ERROR_INVALID_PARAMETER;
+        errcode = ERROR_INVALID_PARAMETER;
         goto cleanup;
     }
 
@@ -215,7 +215,7 @@ DWORD WINAPI WorkerThread(void *param)
         if(!p)
         {
             logf("Error: Command line is too long");
-            exitcode = ERROR_INVALID_PARAMETER;
+            errcode = ERROR_INVALID_PARAMETER;
             goto cleanup;
         }
 
@@ -226,7 +226,7 @@ DWORD WINAPI WorkerThread(void *param)
     if(!cmdline)
     {
         logf("Error: malloc failed, not enough memory for command line");
-        exitcode = ERROR_NOT_ENOUGH_MEMORY;
+        errcode = ERROR_NOT_ENOUGH_MEMORY;
         goto cleanup;
     }
 
@@ -244,7 +244,7 @@ loop:
     // Get access token from ourselves.
     if(!OpenProcessToken(currentProcess, TOKEN_ALL_ACCESS, &currentToken))
     {
-        exitcode = GetLastError();
+        errcode = GetLastError();
         logf_gle("Error: OpenProcessToken failed");
         goto cleanup;
     }
@@ -252,7 +252,7 @@ loop:
     // Session ID is stored in the access token. For services it's normally 0.
     if(!GetTokenInformation(currentToken, TokenSessionId, &sessionId, sizeof(sessionId), &size))
     {
-        exitcode = GetLastError();
+        errcode = GetLastError();
         logf_gle("Error: GetTokenInformation failed");
         goto cleanup;
     }
@@ -262,7 +262,7 @@ loop:
     if (!DuplicateTokenEx(currentToken, TOKEN_ALL_ACCESS, NULL,
         SecurityImpersonation, TokenPrimary, &newToken))
     {
-        exitcode = GetLastError();
+        errcode = GetLastError();
         logf_gle("Error: DuplicateTokenEx failed");
         goto cleanup;
     }
@@ -276,7 +276,7 @@ loop:
     // This requires SeTcbPrivilege, but we're running as SYSTEM and have it.
     if (!SetTokenInformation(newToken, TokenSessionId, &sessionId, sizeof(sessionId)))
     {
-        exitcode = GetLastError();
+        errcode = GetLastError();
         logf_gle("Error: SetTokenInformation failed");
         goto cleanup;
     }
@@ -288,7 +288,7 @@ loop:
     si.lpDesktop = TEXT("WinSta0\\Winlogon");
     if (!CreateProcessAsUser(newToken, 0, cmdline, 0, 0, 0, 0, 0, 0, &si, &pi))
     {
-        exitcode = GetLastError();
+        errcode = GetLastError();
         logf_gle("Error: CreateProcessAsUser failed");
         goto cleanup;
     }
@@ -323,12 +323,12 @@ cleanup:
         free(cmdline);
 #endif
     }
-    return exitcode;
+    return errcode;
 }
 
 void WINAPI ServiceMain(DWORD argc, TCHAR *argv[])
 {
-    DWORD exitcode = ERROR_SUCCESS;
+    DWORD errcode = ERROR_SUCCESS;
     TCHAR *cmdline = TEXT("cmd.exe");
     HANDLE workerHandle = INVALID_HANDLE_VALUE;
 
@@ -346,7 +346,7 @@ void WINAPI ServiceMain(DWORD argc, TCHAR *argv[])
     g_StatusHandle = RegisterServiceCtrlHandlerEx(SERVICE_NAME, ControlHandlerEx, NULL);
     if(!g_StatusHandle)
     {
-        exitcode = GetLastError();
+        errcode = GetLastError();
         logf_gle("Error: RegisterServiceCtrlHandlerEx failed");
         // g_StatusHandle isn't set to INVALID_HANDLE_VALUE because it's a not a normal handle
         goto cleanup;
@@ -356,7 +356,7 @@ void WINAPI ServiceMain(DWORD argc, TCHAR *argv[])
     g_ConsoleEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     if(!g_ConsoleEvent)
     {
-        exitcode = GetLastError();
+        errcode = GetLastError();
         logf_gle("Error: CreateEvent failed");
         g_ConsoleEvent = INVALID_HANDLE_VALUE;
         goto cleanup;
@@ -370,7 +370,7 @@ void WINAPI ServiceMain(DWORD argc, TCHAR *argv[])
     workerHandle = CreateThread(NULL, 0, WorkerThread, cmdline, 0, NULL);
     if(!workerHandle)
     {
-        exitcode = GetLastError();
+        errcode = GetLastError();
         logf_gle("Error: CreateThread failed");
         workerHandle = INVALID_HANDLE_VALUE;
         goto cleanup;
@@ -379,14 +379,14 @@ void WINAPI ServiceMain(DWORD argc, TCHAR *argv[])
     // Wait for the worker thread to exit.
     if(WaitForSingleObject(workerHandle, INFINITE) == WAIT_FAILED)
     {
-        exitcode = GetLastError();
+        errcode = GetLastError();
         logf_gle("Error: WaitForSingleObject failed");
         goto cleanup;
     }
 
-    if(!GetExitCodeThread(workerHandle, &exitcode))
+    if(!GetExitCodeThread(workerHandle, &errcode))
     {
-        exitcode = GetLastError();
+        errcode = GetLastError();
         logf_gle("Error: GetExitCodeThread failed");
         goto cleanup;
     }
@@ -397,7 +397,7 @@ cleanup:
     if(g_StatusHandle)
     {
         g_Status.dwCurrentState = SERVICE_STOPPED;
-        g_Status.dwWin32ExitCode = exitcode;
+        g_Status.dwWin32ExitCode = errcode;
         SetServiceStatus(g_StatusHandle, &g_Status);
         // The service status handle is not a normal handle (it's a struct) and isn't closed.
     }

@@ -129,6 +129,34 @@ TCHAR *g_SessionEventName[] = {
     TEXT("WTS_SESSION_TERMINATE")
 };
 
+// Return the control code's name or NULL if not recognized.
+TCHAR *GetControlCodeName(DWORD code)
+{
+    switch(code)
+    {
+        case 1: return TEXT("SERVICE_CONTROL_STOP");
+        case 2: return TEXT("SERVICE_CONTROL_PAUSE");
+        case 3: return TEXT("SERVICE_CONTROL_CONTINUE");
+        case 4: return TEXT("SERVICE_CONTROL_INTERROGATE");
+        case 5: return TEXT("SERVICE_CONTROL_SHUTDOWN");
+        case 6: return TEXT("SERVICE_CONTROL_PARAMCHANGE");
+        case 7: return TEXT("SERVICE_CONTROL_NETBINDADD");
+        case 8: return TEXT("SERVICE_CONTROL_NETBINDREMOVE");
+        case 9: return TEXT("SERVICE_CONTROL_NETBINDENABLE");
+        case 10: return TEXT("SERVICE_CONTROL_NETBINDDISABLE");
+        case 11: return TEXT("SERVICE_CONTROL_DEVICEEVENT");
+        case 12: return TEXT("SERVICE_CONTROL_HARDWAREPROFILECHANGE");
+        case 13: return TEXT("SERVICE_CONTROL_POWEREVENT");
+        case 14: return TEXT("SERVICE_CONTROL_SESSIONCHANGE");
+        case 15: return TEXT("SERVICE_CONTROL_PRESHUTDOWN");
+        case 16: return TEXT("SERVICE_CONTROL_TIMECHANGE");
+        case 32: return TEXT("SERVICE_CONTROL_TRIGGEREVENT");
+        case 64: return TEXT("SERVICE_CONTROL_USERMODEREBOOT");
+    }
+
+    return NULL;
+}
+
 // Entry point.
 int main(int argc, char *argv[])
 {
@@ -407,6 +435,13 @@ void SessionChange(DWORD eventType, WTSSESSION_NOTIFICATION *sn)
 
 DWORD WINAPI ControlHandlerEx(DWORD control, DWORD eventType, void *eventData, void *context)
 {
+    TCHAR *codename = GetControlCodeName(control);
+
+    if(codename)
+        logf("ControlHandlerEx: code %s, event 0x%I32x", codename, eventType);
+    else
+        logf("ControlHandlerEx: code 0x%I32x, event 0x%I32x", control, eventType);
+
     switch(control)
     {
         case SERVICE_CONTROL_STOP:
@@ -419,10 +454,6 @@ DWORD WINAPI ControlHandlerEx(DWORD control, DWORD eventType, void *eventData, v
 
         case SERVICE_CONTROL_SESSIONCHANGE:
             SessionChange(eventType, (WTSSESSION_NOTIFICATION*) eventData);
-            break;
-
-        default:
-            logf("ControlHandlerEx: code 0x%I32x, event 0x%I32x", control, eventType);
             break;
     }
 

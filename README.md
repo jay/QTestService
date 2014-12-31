@@ -17,7 +17,11 @@ Do not forget this.
 
 ### There is a delay before your process is created.
 
-On the Windows 7 x64 SP1 computer that I am running QTestService on it can take up to 10 seconds before the service receives notification that the console has been connected to a different session. I don't know what causes the delay. QTestService only starts your process after it has received the notification.
+On the Windows 7 x64 SP1 computer that I am running QTestService on it can take up to 10 seconds before the service receives notification that the console has been connected to a different session. I don't know what causes the delay. In the Windows Application event log I see this info message from Winlogon:
+
+`The winlogon notification subscriber <SessionEnv> was unavailable to handle a notification event.`
+
+QTestService only starts your process after it has received the notification.
 
 ### Error: CreateProcessAsUser failed, GetLastError: 5
 

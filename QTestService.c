@@ -8,8 +8,8 @@ This service works to run a command on the winlogon desktop during switch user. 
 seconds before the command runs, not sure why. The service stops after it runs the command unless
 you define LOOP_WORKER, in which case it continues to run and monitor for session connections.
 
-gcc -o QTestService QTestService.c
-gcc -DLOOP_WORKER -o QTestService QTestService.c
+gcc -o QTestService QTestService.c -lpsapi
+gcc -DLOOP_WORKER -o QTestService QTestService.c -lpsapi
 
 If you are making a Unicode build you must define both UNICODE and _UNICODE.
 
@@ -17,14 +17,43 @@ sc create QTestService binPath= X:\code\winlogon\QTestService\QTestService.exe s
 sc start QTestService
 */
 
+/* The command line that will be executed is limited to 260 characters. It is the same as
+lpCommandLine in CreateProcess.
+*/
+#define COMMAND_LINE   TEXT("cmd.exe")
+
+#define SERVICE_NAME   TEXT("QTestService")
+
+/* The logfile is a verbose record of the service's behavior. It is created in the same directory as
+the service if you don't specify a path. To disable it use an empty string TEXT("").
+
+While most information is sent to the logfile, some errors, warnings and information related to the
+state of the service may also be reported to Windows' Application event log, regardless of whether
+or not the logfile is used.
+
+Logfile timestamps are in local time. Event log timestamps are in UTC time, however
+Microsoft's event log viewer shows the adjusted local time in the 'Date and Time' column.
+
+Any failure to write to the logfile or event log is ignored.
+*/
+#define LOGFILE   TEXT("QTestService.log")
+
+
 #define   _CRT_SECURE_NO_WARNINGS
+
+/* Use the original GetModuleFilenameEx() location.
+http://msdn.microsoft.com/en-us/library/windows/desktop/ms683198.aspx
+*/
+#define PSAPI_VERSION 1
 
 #include <windows.h>
 #include <tchar.h>
+#include <psapi.h>
 #include <stdio.h>
 
 #ifdef _MSC_VER
 #pragma comment(lib, "advapi32.lib")
+#pragma comment(lib, "psapi.lib")
 #endif
 
 
@@ -104,12 +133,12 @@ CRITICAL_SECTION g_log_lock;
 #define logf_gle(...)   plumb_logf(TRUE, __VA_ARGS__)
 
 
-#define SERVICE_NAME TEXT("QTestService")
-
 SERVICE_STATUS g_Status;
 SERVICE_STATUS_HANDLE g_StatusHandle; // this isn't a regular handle it's a struct
 HANDLE g_ConsoleEvent = INVALID_HANDLE_VALUE;
 DWORD g_TargetSessionId;
+TCHAR *g_ServiceDirectory; // Fully qualified path to this service's directory. Ends in a backslash.
+
 
 void WINAPI ServiceMain(DWORD argc, TCHAR *argv[]);
 DWORD WINAPI ControlHandlerEx(DWORD controlCode, DWORD eventType, void *eventData, void *context);
@@ -157,6 +186,67 @@ TCHAR *GetControlCodeName(DWORD code)
     return NULL;
 }
 
+void EventLog(WORD wType, const TCHAR *msg)
+{
+    HANDLE hEventSource;
+
+    hEventSource = RegisterEventSource(NULL, SERVICE_NAME);
+    if(!hEventSource)
+        return;
+
+    ReportEvent(hEventSource, wType, 0, 0x00000000, NULL, 1, 0, &msg, NULL);
+    DeregisterEventSource(hEventSource);
+}
+
+void EventLogError(const TCHAR *msg) { EventLog(EVENTLOG_ERROR_TYPE, msg); }
+void EventLogInfo(const TCHAR *msg) { EventLog(EVENTLOG_INFORMATION_TYPE, msg); }
+void EventLogWarn(const TCHAR *msg) { EventLog(EVENTLOG_WARNING_TYPE, msg); }
+
+BOOL init_g_ServiceDirectory()
+{
+    DWORD i = 0, len = 0;
+    TCHAR *p = NULL;
+    BOOL retcode = FALSE;
+
+    for(i = 512; i <= 32768; i *= 2, len = 0)
+    {
+        p = realloc(g_ServiceDirectory, (i * sizeof(TCHAR)));
+
+        if(!p)
+            goto cleanup;
+
+        g_ServiceDirectory = p;
+        p = NULL;
+
+        len = GetModuleFileNameEx(GetCurrentProcess(), NULL, g_ServiceDirectory, i);
+
+        if(len && ((len + 1) < i))
+            break;
+    }
+
+    if(!len)
+        goto cleanup;
+
+    g_ServiceDirectory[len] = 0;
+
+    p = _tcsrchr(g_ServiceDirectory, TEXT('\\'));
+    if(!p)
+        goto cleanup;
+
+    *++p = 0;
+
+    retcode = TRUE;
+
+cleanup:
+    if(retcode == FALSE)
+    {
+        free(g_ServiceDirectory);
+        g_ServiceDirectory = NULL;
+    }
+
+    return retcode;
+}
+
 // Entry point.
 int main(int argc, char *argv[])
 {
@@ -165,7 +255,18 @@ int main(int argc, char *argv[])
         {NULL, NULL}
     };
 
-    g_log_fp = _tfopen(TEXT("X:\\code\\winlogon\\QTestService\\QTestService.log"), TEXT("a"));
+    if(!init_g_ServiceDirectory()
+        || (_tcslen(g_ServiceDirectory) > (MAX_PATH - 1))
+        || !SetCurrentDirectory(g_ServiceDirectory))
+    {
+        /* Unfortunately there doesn't seem to be any documented way to set the current directory to
+        an extended path. I can't see this failing for any other reason.
+        */
+        EventLogError(TEXT("Failed to set the working directory to this service's directory."));
+        exit(1);
+    }
+
+    g_log_fp = _tfopen(LOGFILE, TEXT("a"));
     if(g_log_fp)
     {
         _ftprintf(g_log_fp, TEXT("\n\n"));
@@ -329,7 +430,7 @@ cleanup:
 void WINAPI ServiceMain(DWORD argc, TCHAR *argv[])
 {
     DWORD errcode = ERROR_SUCCESS;
-    TCHAR *cmdline = TEXT("cmd.exe");
+    TCHAR *cmdline = COMMAND_LINE;
     HANDLE workerHandle = INVALID_HANDLE_VALUE;
 
     logf("ServiceMain: start");

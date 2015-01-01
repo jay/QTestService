@@ -56,6 +56,10 @@ http://msdn.microsoft.com/en-us/library/windows/desktop/ms683198.aspx
 #pragma comment(lib, "psapi.lib")
 #endif
 
+#if !defined( _MSC_VER ) || (_MSC_VER < 1300)
+#define __pragma(x)
+#endif
+
 
 // begin: stuff for older mingw
 #ifndef WTS_CONSOLE_CONNECT
@@ -107,7 +111,10 @@ CRITICAL_SECTION g_log_lock;
 
 // This is meant to be called by the other function macros.
 // GetLastError must be the first call to accurately get the last error!
-#define plumb_logf(show_gle, ...) do { \
+#define plumb_logf(show_gle, ...)   \
+__pragma(warning(push)) \
+__pragma(warning(disable:4127)) \
+do { \
     if(g_log_fp) { \
         DWORD gle; \
         SYSTEMTIME t; \
@@ -124,7 +131,8 @@ CRITICAL_SECTION g_log_lock;
         fflush(g_log_fp); \
         LeaveCriticalSection(&g_log_lock); \
     } \
-} while(0)
+} while(0) \
+__pragma(warning(pop))
 
 // log and don't append last error
 #define logf(...)   plumb_logf(FALSE, __VA_ARGS__)
@@ -202,7 +210,7 @@ void EventLogError(const TCHAR *msg) { EventLog(EVENTLOG_ERROR_TYPE, msg); }
 void EventLogInfo(const TCHAR *msg) { EventLog(EVENTLOG_INFORMATION_TYPE, msg); }
 void EventLogWarn(const TCHAR *msg) { EventLog(EVENTLOG_WARNING_TYPE, msg); }
 
-BOOL init_g_ServiceDirectory()
+BOOL init_g_ServiceDirectory(void)
 {
     DWORD i = 0, len = 0;
     TCHAR *p = NULL;
@@ -254,6 +262,8 @@ int main(int argc, char *argv[])
         {SERVICE_NAME, ServiceMain},
         {NULL, NULL}
     };
+
+    (void)argc, (void)argv;
 
     if(!init_g_ServiceDirectory()
         || (_tcslen(g_ServiceDirectory) > (MAX_PATH - 1))
@@ -433,6 +443,8 @@ void WINAPI ServiceMain(DWORD argc, TCHAR *argv[])
     TCHAR *cmdline = COMMAND_LINE;
     HANDLE workerHandle = INVALID_HANDLE_VALUE;
 
+    (void)argc, (void)argv;
+
     logf("ServiceMain: start");
 
     g_Status.dwServiceType        = SERVICE_WIN32;
@@ -538,6 +550,8 @@ DWORD WINAPI ControlHandlerEx(DWORD control, DWORD eventType, void *eventData, v
 {
     DWORD errcode = ERROR_SUCCESS;
     TCHAR *codename = GetControlCodeName(control);
+
+    (void)context;
 
     if(codename)
         logf("ControlHandlerEx: code %s, event 0x%I32x", codename, eventType);
